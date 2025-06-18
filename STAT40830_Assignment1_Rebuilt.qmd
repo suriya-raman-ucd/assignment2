@@ -84,7 +84,7 @@ A basic check of the dataset shows it's well structured:
 ```{r, fig.width=6, fig.height=3} 
 allData[, .N, by = `Indicator Name`][order(-N)][1:10] |>
   ggplot(aes(x = reorder(`Indicator Name`, N), y = N)) +
-  geom_col(fill = "steelblue") +
+  geom_col(fill = "red") +
   coord_flip() +
   labs(title = "Top 10 Most Common Indicators", 
        x = "Indicator Name", y = "Count") +
