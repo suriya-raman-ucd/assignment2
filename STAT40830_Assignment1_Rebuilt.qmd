@@ -1,0 +1,263 @@
+---
+title: "STAT40830 - Assignment 1"
+author: "Suriya Raman S S"
+format:
+  beamer-pdf:
+    echo: true
+engine: knitr
+---
+
+### Slide 1 – Loading the Datasets
+```{r, echo=FALSE}
+# Loading the libraries
+library(data.table)
+library(ggplot2)
+```
+
+
+```{r}
+fra = fread("indicators_fra.csv")
+ind = fread("indicators_ind.csv")
+irl = fread("indicators_irl.csv")
+dataList = list(France = fra, 
+                India = ind, Ireland = irl)
+```
+
+Loading the datasets using fread()
+
+---
+
+### Slide 2 – Merge Datasets
+
+```{r}
+allData = rbindlist(dataList, idcol = "Country")
+```
+
+Merges all 3 datasets into one combined `data.table` named `allData`.
+
+---
+
+### Slide 3 – Assign Classes
+
+```{r}
+allData[, Year := as.integer(Year)]
+allData[, Value := as.numeric(Value)]
+```
+
+Converts Year and Value to numeric types for safe analysis.
+
+---
+
+### Slide 4 – Remove Missing Values
+
+```{r}
+allData = allData[!is.na(Year) & !is.na(Value)]
+```
+
+Removed rows where `Year` or `Value` were missing — only 3 rows dropped.
+
+---
+
+### Slide 5 – Quick Data Exploration
+\scriptsize
+```{r, fig.width=6, fig.height=3}
+cat("Rows:", nrow(allData), "Cols:", ncol(allData))
+colSums(is.na(allData))
+str(allData)
+```
+---
+
+### Slide 5 - Cont.
+
+
+A basic check of the dataset shows it's well structured:
+
+- 236,000+ rows across 7 columns covering 3 countries
+- Only 3 missing values in Year and Value
+- Year variable ranges from 1960 to 2024
+- All variable types appear correctly assigned (e.g., character vs numeric)
+
+---
+
+### Slide 6 – Explore Value Distribution
+\scriptsize
+```{r, fig.width=6, fig.height=3} 
+allData[, .N, by = `Indicator Name`][order(-N)][1:10] |>
+  ggplot(aes(x = reorder(`Indicator Name`, N), y = N)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top 10 Most Common Indicators", 
+       x = "Indicator Name", y = "Count") +
+  theme_minimal()
+```
+These are the most commonly reported indicators across
+the dataset.
+Choosing from this list makes sure our analysis won’t 
+run into missing data gaps.
+---
+
+### Slide 7 – Filter: GDP per Capita
+
+\scriptsize
+```{r, fig.width=6, fig.height=3} 
+
+gdp = allData[`Indicator Name` == "GDP per capita (current US$)"]
+ggplot(gdp, aes(Year, Value, color = Country)) +
+  geom_line(size = 0.7) +
+  labs(title = "GDP per capita (in US Dollars $)", y = "USD")
+
+```
+---
+### Slide 7 - 2 – Filter: GDP per Capita cont.
+We extract and plot GDP per capita to compare how economic 
+performance differs over time between the three countries.
+
+Ireland's GDP per capita surged after 2000 and stayed highest.
+France grew slowly but steadily.
+India's growth is visible but still much lower.
+
+---
+
+### Slide 8 – Filter and Plot Population Growth
+\scriptsize
+```{r, fig.width=6, fig.height=3} 
+pop = allData[`Indicator Name` == "Population growth (annual %)"]
+
+ggplot(pop, aes(Year, Value, color = Country)) +
+  geom_line(size = 0.7) +
+  labs(title = "Population Growth Rate", y = "% growth")
+```
+---
+
+### Slide 8 - 2 – Filter and Plot Population Growth cont.
+
+We filter and plot population growth over time.
+
+India’s rate is high but declining
+
+France stays steady
+
+Ireland fluctuates a lot in recent years
+
+---
+
+### Slide 9 – Filter and Plot: Education Spend
+\scriptsize
+```{r, fig.width=6, fig.height=3} 
+edu = allData[`Indicator Name` == "Government expenditure 
+              on education, total (% of GDP)"]
+
+ggplot(edu, aes(Year, Value, color = Country)) +
+  geom_line(size = 0.7) +
+  labs(title = "Education Spend (% GDP)", y = "% of GDP")
+```
+---
+
+### Slide 9 - 2 – Filter and Plot: Education Spend cont.
+
+We filter and plot education expenditure (% of GDP) over
+time.
+
+France remains consistently high
+
+Ireland shows fluctuation with spikes and recently its
+going down
+
+India’s spend is lower but gradually improving
+
+---
+
+
+### Slide 10 – Filter and Plot: Health Expenditure
+\scriptsize
+```{r, fig.width=6, fig.height=3} 
+
+health = allData[`Indicator Name` == "Current
+                 health expenditure (% of GDP)"]
+ggplot(health, aes(Year, Value, color = Country)) +
+  geom_line(size = 0.7) +
+  labs(title = "Health Spending (% GDP)", y = "% of GDP")
+```
+
+---
+
+### Slide 10 - 2 – Filter and Plot: Health Expenditure cont.
+
+We filter and plot Health expenditure (% of GDP) over time.
+
+France leads with consistently high spend
+
+Ireland rose until 2010 but declined after
+
+India remains low and flat
+
+---  
+  
+  
+### Slide 11 – Grouped Summary with keyby
+\scriptsize
+```{r, fig.width=6, fig.height=3} 
+allData[`Indicator Name` %in% c("GDP per capita (current US$)", 
+  "Population growth (annual %)",
+  "Government expenditure on education, total (% of GDP)",
+  "Current health expenditure (% of GDP)",
+  "Carbon dioxide (CO2) emissions from
+  Power Industry (Energy) (Mt CO2e)") ,
+  .(avgValue = mean(Value, na.rm = TRUE)),
+  keyby = .( `Indicator Name`, Country)]
+```
+---
+
+### Slide 11 - 2 – Grouped Summary with keyby cont.
+We group the data by Country and Indicator Name, then compute the average
+value using keyby. This helps us compare long-term trends between countries
+for select indicators.
+
+---
+
+### Slide 12 - Energy Expenditure
+
+\scriptsize
+```{r, fig.width=6, fig.height=3}
+co2 = allData[`Indicator Name` == "Carbon dioxide (CO2)
+              emissions from Power Industry (Energy) (Mt CO2e)"]
+ggplot(co2, aes(Year, Value, color = Country)) +
+  geom_line(size = 0.7) +
+  labs(title = "CO2 Emissions – Power Industry (Mt CO2e)", y = "Mt CO2e")
+```
+---
+
+### Slide 12 - 2 – Energy Expenditure cont
+
+India’s CO₂ emissions from power have grown massively since 1980.
+France and Ireland remain flat with much lower levels.
+Gap continues to widen due to India’s rising energy demand.
+
+---
+
+### Slide 13 – Summary of Observations - Country Comparison
+
+Ireland leads in GDP per capita, but fluctuates in social spending
+
+France is consistent across indicators and invests the most in public services
+
+India has rapid population growth and rising emissions, but low
+per-capita spending
+
+---
+
+### Slide 14 – Summary of Observations - Indicator Perspective
+
+GDP: Ireland highest, India lowest
+
+Education & Health: France invests the most
+
+Population: India growing fastest
+
+Energy Use: France and Ireland higher per capita
+
+CO₂ Emissions: India’s emissions rising fast from power sector
+
+
+
+
